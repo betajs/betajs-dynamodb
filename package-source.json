@@ -1,0 +1,65 @@
+{
+    "name": "betajs-dynamodb",
+    "version": "1.0.12",
+    "description": "BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.",
+    "contributors": [
+        "Oliver Friedmann"
+    ],
+    "devDependencies": {
+        "lodash": "",
+        "grunt": "",
+        "grunt-contrib-jshint": "",
+        "grunt-contrib-concat": "",
+        "grunt-contrib-uglify": "~2.3.0",
+        "grunt-contrib-clean": "",
+        "grunt-preprocess": "",
+        "grunt-git-revision-count": "",
+        "grunt-closure-tools": "",
+        "qunitjs": "",
+        "grunt-wget": "",
+        "grunt-jsdoc": "",
+        "grunt-shell": "",
+        "grunt-template": "",
+        "grunt-githooks": "",
+        "grunt-betajs-docs-compile": "",
+        "betajs-scoped": "~0.0.13",
+        "betajs-compile": "~0.0.28",
+        "js-beautify": ""
+    },
+    "dependencies": {
+        "betajs": "~1.0.96",
+        "betajs-data": "~1.0.41",
+        "dynamodb": ""
+    },
+    "repository": {
+        "type": "git",
+        "url": "git://github.com/betajs/betajs-dynamodb.git"
+    },
+    "main": "dist/betajs-dynamodb.js",
+    "meta": {
+        "guid": "1f507e0c-602b-4372-b067-4e19442f28f4",
+        "installdoc": "docsrc/common/install.md",
+        "summarydoc": "docsrc/common/summary.md",
+        "badges": {
+            "codeclimate": true,
+            "travis": false,
+            "npm": true
+        },
+        "compatability": {
+            "NodeJS": "4.0 - Latest"
+        },
+        "weakDependencies": {
+            "betajs-scoped": "https://github.com/betajs/betajs-scoped"
+        },
+        "dependencies": {
+            "betajs": "https://github.com/betajs/betajs",
+            "betajs-data": "https://github.com/betajs/betajs-data"
+        },
+        "cdn": {
+            "betajs-dynamodb.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb.js",
+            "betajs-dynamodb.min.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb.min.js",
+            "betajs-dynamodb-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb-noscoped.js",
+            "betajs-dynamodb-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb-noscoped.min.js"
+        }
+    }
+}
