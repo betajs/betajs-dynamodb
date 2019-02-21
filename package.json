@@ -1,5 +1,5 @@
 {
-    "homepage": "http://betajs.com",
+    "homepage": "https://betajs.com",
     "license": "Apache-2.0",
     "licenses": [
         {
@@ -15,12 +15,16 @@
         "url": "https://github.com/betajs/betajs-dynamodb/issues"
     },
     "name": "betajs-dynamodb",
-    "version": "0.0.1",
+    "version": "1.0.1",
     "description": "BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.",
     "contributors": [
-        "Oliver Friedmann"
+        "Oliver Friedmann",
+        "Pablo Iglesias"
     ],
     "devDependencies": {
+        "@babel/core": "^7.3.3",
+        "@babel/polyfill": "^7.2.5",
+        "@babel/preset-env": "^7.3.1",
         "lodash": "",
         "grunt": "",
         "grunt-contrib-jshint": "",
@@ -30,6 +34,7 @@
         "grunt-preprocess": "",
         "grunt-git-revision-count": "",
         "grunt-closure-tools": "",
+        "load-grunt-tasks": "^4.0.0",
         "qunitjs": "",
         "grunt-wget": "",
         "grunt-jsdoc": "",
@@ -43,8 +48,7 @@
     },
     "dependencies": {
         "betajs": "~1.0.96",
-        "betajs-data": "~1.0.41",
-        "aws-sdk": "~2.400.0"
+        "betajs-data": "~1.0.41"
     },
     "repository": {
         "type": "git",
@@ -52,8 +56,8 @@
     },
     "main": "dist/betajs-dynamodb.js",
     "meta": {
-        "blog": "http://blog.betajs.com",
-        "twitter": "http://twitter.com/thebetajs",
+        "blog": "https://blog.betajs.com",
+        "twitter": "https://twitter.com/thebetajs",
         "guid": "1f507e0c-602b-4372-b067-4e19442f28f4",
         "installdoc": "docsrc/common/install.md",
         "summarydoc": "docsrc/common/summary.md",

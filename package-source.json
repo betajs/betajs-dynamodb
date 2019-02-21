@@ -1,11 +1,15 @@
 {
     "name": "betajs-dynamodb",
-    "version": "1.0.12",
+    "version": "1.0.1",
     "description": "BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.",
     "contributors": [
-        "Oliver Friedmann"
+        "Oliver Friedmann",
+        "Pablo Iglesias"
     ],
     "devDependencies": {
+        "@babel/core": "^7.3.3",
+        "@babel/polyfill": "^7.2.5",
+        "@babel/preset-env": "^7.3.1",
         "lodash": "",
         "grunt": "",
         "grunt-contrib-jshint": "",
@@ -15,6 +19,7 @@
         "grunt-preprocess": "",
         "grunt-git-revision-count": "",
         "grunt-closure-tools": "",
+        "load-grunt-tasks": "^4.0.0",
         "qunitjs": "",
         "grunt-wget": "",
         "grunt-jsdoc": "",
@@ -28,8 +33,7 @@
     },
     "dependencies": {
         "betajs": "~1.0.96",
-        "betajs-data": "~1.0.41",
-        "dynamodb": ""
+        "betajs-data": "~1.0.41"
     },
     "repository": {
         "type": "git",

@@ -1,4 +1,4 @@
-# betajs-dynamodb 1.0.12
+# betajs-dynamodb 1.0.1
 [![Code Climate](https://codeclimate.com/github/betajs/betajs-dynamodb/badges/gpa.svg)](https://codeclimate.com/github/betajs/betajs-dynamodb)
 [![NPM](https://img.shields.io/npm/v/betajs-dynamodb.svg?style=flat)](https://www.npmjs.com/package/betajs-dynamodb)
 
@@ -80,11 +80,11 @@ Once you have instantiated your `database` instance, you can create a correspond
 ## Links
 | Resource   | URL |
 | :--------- | --: |
-| Homepage   | [http://betajs.com](http://betajs.com) |
+| Homepage   | [https://betajs.com](https://betajs.com) |
 | Git        | [git://github.com/betajs/betajs-dynamodb.git](git://github.com/betajs/betajs-dynamodb.git) |
 | Repository | [https://github.com/betajs/betajs-dynamodb](https://github.com/betajs/betajs-dynamodb) |
-| Blog       | [http://blog.betajs.com](http://blog.betajs.com) | 
-| Twitter    | [http://twitter.com/thebetajs](http://twitter.com/thebetajs) | 
+| Blog       | [https://blog.betajs.com](https://blog.betajs.com) | 
+| Twitter    | [https://twitter.com/thebetajs](https://twitter.com/thebetajs) | 
  
 
 
@@ -121,6 +121,7 @@ Once you have instantiated your `database` instance, you can create a correspond
 ## Main Contributors
 
 - Oliver Friedmann
+- Pablo Iglesias
 
 ## License
 

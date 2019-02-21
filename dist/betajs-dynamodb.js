@@ -1,10 +1,10 @@
 /*!
-betajs-dynamodb - v1.0.12 - 2018-11-06
-Copyright (c) Oliver Friedmann
+betajs-dynamodb - v1.0.1 - 2019-02-21
+Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
 /** @flow **//*!
-betajs-scoped - v0.0.17 - 2017-10-22
+betajs-scoped - v0.0.19 - 2018-04-07
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -476,7 +476,7 @@ function newNamespace (opts/* : {tree ?: boolean, global ?: boolean, root ?: Obj
 	function nodeUnresolvedWatchers(node/* : Node */, base, result) {
 		node = node || nsRoot;
 		result = result || [];
-		if (!node.ready)
+		if (!node.ready && node.lazy.length === 0 && node.watchers.length > 0)
 			result.push(base);
 		for (var k in node.children) {
 			var c = node.children[k];
@@ -759,10 +759,7 @@ function newScope (parent, parentNS, rootNS, globalNS) {
 		resolve: function (namespaceLocator) {
 			var parts = namespaceLocator.split(":");
 			if (parts.length == 1) {
-				return {
-					namespace: privateNamespace,
-					path: parts[0]
-				};
+                throw ("The locator '" + parts[0] + "' requires a namespace.");
 			} else {
 				var binding = bindings[parts[0]];
 				if (!binding)
@@ -967,7 +964,7 @@ var Public = Helper.extend(rootScope, (function () {
 return {
 		
 	guid: "4b6878ee-cb6a-46b3-94ac-27d91f58d666",
-	version: '0.0.17',
+	version: '0.0.19',
 		
 	upgrade: Attach.upgrade,
 	attach: Attach.attach,
@@ -1009,20 +1006,21 @@ Public.exports();
 	return Public;
 }).call(this);
 /*!
-betajs-dynamodb - v1.0.12 - 2018-11-06
-Copyright (c) Oliver Friedmann
+betajs-dynamodb - v1.0.1 - 2019-02-21
+Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
 
 (function () {
 var Scoped = this.subScope();
-Scoped.binding('module', 'global:BetaJS.Data.Databases.Dynamo');
+Scoped.binding('module', 'global:BetaJS.Data.Databases.DynamoDB');
 Scoped.binding('base', 'global:BetaJS');
 Scoped.binding('data', 'global:BetaJS.Data');
 Scoped.define("module:", function () {
 	return {
     "guid": "1f507e0c-602b-4372-b067-4e19442f28f4",
-    "version": "1.0.12"
+    "version": "1.0.1",
+    "datetime": 1550785152170
 };
 });
 Scoped.assumeVersion('base:version', '~1.0.96');
@@ -1051,7 +1049,12 @@ Scoped.define("module:DynamoDatabaseTable", [
                 if (this.__table)
                     return Promise.create(this.__table);
                 return this._database.dynamodb().mapSuccess(function(db) {
-                    this.__table = db.collection(this._table_name);
+                    this.__table = {
+                        params: {
+                            TableName: this._table_name
+                        },
+                        client: db.client
+                    };
                     return this.__table;
                 }, this);
             },
@@ -1061,105 +1064,75 @@ Scoped.define("module:DynamoDatabaseTable", [
             },
 
             _encode: function(data, valueType) {
-                if (!data)
-                    return data;
-                data = Objs.map(data, function(value, k) {
-                    if (value && Types.is_object(value) && !value._bsontype) {
-                        this._table_options.datekeys.forEach(function(key) {
-                            if (key === k)
-                                valueType = "date";
-                        });
-                        return this._encode(value, valueType);
-                    }
-                    if (valueType === "date")
-                        return new Date(value);
-                    return value;
-                }, this);
-                var objid = this._database.dynamo_object_id();
-                this._table_options.idkeys.forEach(function(key) {
-                    if (key in data && !Types.is_object(data[key]))
-                        data[key] = new objid(data[key] + "");
-                }, this);
-                this._table_options.datekeys.forEach(function(key) {
-                    if (key in data && !Types.is_object(data[key]))
-                        data[key] = new Date(data[key]);
-                }, this);
                 return data;
             },
 
             _decode: function(data) {
-                data = Objs.clone(data, 1);
-                this._table_options.idkeys.forEach(function(key) {
-                    if (key in data && Types.is_object(data[key]))
-                        data[key] = data[key] + "";
-                }, this);
-                this._table_options.datekeys.forEach(function(key) {
-                    if (key in data && Types.is_object(data[key]))
-                        data[key] = data[key].getTime();
-                }, this);
                 return data;
             },
 
             _find: function(query, options) {
                 return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.find, query).mapSuccess(function(result) {
-                        options = options || {};
-                        if ("sort" in options)
-                            result = result.sort(options.sort);
-                        if ("skip" in options)
-                            result = result.skip(options.skip);
-                        if ("limit" in options)
-                            result = result.limit(options.limit);
-                        return Promise.funcCallback(result, result.toArray).mapSuccess(function(cols) {
-                            return new ArrayIterator(cols);
-                        }, this);
+                    const queryParams = this.__queryParams(query, options);
+                    const params = Object.assign(table.params, queryParams);
+                    return Promise.funcCallback(table.client, table.client.query, params).mapSuccess(function(data) {
+                        return new ArrayIterator(data.Items);
+                    }, this);
+                }, this);
+            },
+
+            _findOne: function(query) {
+                return this.table().mapSuccess(function(table) {
+                    const params = Object.assign(table.params, {
+                        Key: query
+                    });
+                    return Promise.funcCallback(table.client, table.client.get, params).mapSuccess(function(data) {
+                        return new ArrayIterator(data.Item);
                     }, this);
                 }, this);
             },
 
             _count: function(query) {
                 return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.find, query).mapSuccess(function(result) {
-                        return Promise.funcCallback(result, result.count);
-                    });
-                });
-            },
-
-            _insertRow: function(row) {
-                return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.insertOne, row).mapSuccess(function(result) {
-                        return row;
+                    const queryParams = this.__queryParams(query, options);
+                    const params = Object.assign(table.params, queryParams);
+                    return Promise.funcCallback(table.client, table.client.query, params).mapSuccess(function(data) {
+                        return new ArrayIterator(data.Count);
                     }, this);
                 }, this);
             },
 
-            _insertRows: function(rows) {
+            _insertRow: function(row) {
                 return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.insertMany, rows).mapSuccess(function(result) {
-                        return row;
+                    const params = Object.assign(table.params, {
+                        Item: row
+                    });
+                    return Promise.funcCallback(table.client, table.client.put, params).mapSuccess(function(result) {
+                        return result;
                     }, this);
                 }, this);
             },
 
             _removeRow: function(query) {
                 return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.deleteOne, query);
-                }, this);
-            },
-
-            _removeRows: function(query) {
-                return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.deleteMany, query);
-                }, this);
-            },
-
-            _updateRow: function(query, row) {
-                return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.updateOne, query, {
-                        "$set": row
-                    }).mapSuccess(function() {
-                        return row;
+                    const params = Object.assign(table.params, {
+                        Key: query
                     });
+                    return Promise.funcCallback(table.client, table.client.delete, params);
+                }, this);
+            },
+
+            _updateRow: function(key, data) {
+                return this.table().mapSuccess(function(table) {
+                    const updateParams = this.__updateParams(data);
+                    let params = Object.assign(table.params, {
+                        Key: key,
+                        ReturnValues: "UPDATED_NEW"
+                    });
+                    params = Object.assign(params, updateParams);
+                    return Promise.funcCallback(table.client, table.client.update, params).mapSuccess(function(result) {
+                        return result;
+                    }, this);
                 }, this);
             },
 
@@ -1171,10 +1144,76 @@ Scoped.define("module:DynamoDatabaseTable", [
                 });
             },
 
-            _renameTable: function(newName) {
-                return this.table().mapSuccess(function(table) {
-                    return Promise.funcCallback(table, table.rename, newName);
+            __updateParams(query) {
+                const workQuery = Object.assign(query);
+                let updateExpressions = [];
+                let expressionAttributesValues = [];
+                Objs.iter(workQuery, function(item, index) {
+                    const indexValue = Math.floor((Math.random() * 10) + 1);
+                    updateExpressions.push(`${index} = :${indexValue}`);
+                    expressionAttributesValues[`:${indexValue}`] = item;
                 });
+
+                return {
+                    "UpdateExpression": "set " + updateExpressions.join(",  "),
+                    "ExpressionAttributeValues": expressionAttributesValues
+                };
+            },
+
+            __queryParams(query, options) {
+                const workQuery = Object.assign(query);
+                let keyConditionExpresion = [];
+                let filterConditionExpresion = [];
+                let expressionAttributesNames = [];
+                let expressionAttributesValues = [];
+                Objs.iter(workQuery.keyConditions, function(item, index) {
+                    if (Types.is_object(item)) {
+                        const operator = Objs.keys(item).join();
+                        if (operator !== "begins_with") {
+                            let op = "";
+                            switch (operator) {
+                                case "ne":
+                                    op = "!=";
+                                    break;
+                                default:
+                                    op = "=";
+                            }
+                            keyConditionExpresion.push(`#${index} ${op} :${index}`);
+                        } else {
+                            keyConditionExpresion.push(`begins_with(#${index}, :${index})`);
+                        }
+                        expressionAttributesNames[`#${index}`] = index;
+                        expressionAttributesValues[`:${index}`] = Objs.values(item)[0];
+                    } else {
+                        keyConditionExpresion.push(`#${index} = :${index}`);
+                        expressionAttributesNames[`#${index}`] = index;
+                        expressionAttributesValues[`:${index}`] = item;
+                    }
+                });
+
+                Objs.iter(workQuery.filterExpression, function(item, index) {
+                    if (Types.is_object(item)) {
+                        const operator = Objs.keys(item).join();
+                        if (operator !== "begins_with") {
+                            filterConditionExpresion.push(`#${index} ${operator} :${index}`);
+                        } else {
+                            filterConditionExpresion.push(`begins_with(#${index}, :${index})`);
+                        }
+                        expressionAttributesNames[`#${index}`] = index;
+                        expressionAttributesValues[`:${index}`] = Objs.values(item)[0];
+                    } else {
+                        filterConditionExpresion.push(`#${index} = :${index}`);
+                        expressionAttributesNames[`#${index}`] = index;
+                        expressionAttributesValues[`:${index}`] = item;
+                    }
+                });
+
+                return {
+                    "KeyConditionExpression": keyConditionExpresion.join(" and "),
+                    "FilterExpression": filterConditionExpresion.join(" and "),
+                    "ExpressionAttributeNames": expressionAttributesNames,
+                    "ExpressionAttributeValues": expressionAttributesValues
+                };
             }
 
         };
@@ -1195,20 +1234,38 @@ Scoped.define("module:DynamoDatabase", [
         return {
 
             constructor: function(db) {
-                if (Types.is_string(db)) {
-                    this.__dbUri = Strings.strip_start(db, "dynamodb://");
-                    this.__dbObject = this.cls.uriToObject(db);
-                } else {
-                    db = Objs.extend({
-                        database: "database",
-                        server: "localhost",
-                        port: 27017
-                    }, db);
-                    this.__dbObject = db;
-                    this.__dbUri = this.cls.objectToUri(db);
-                }
                 inherited.constructor.call(this);
-                this.dynamo_module = require("dynamodb");
+                const AWS = require("aws-sdk");
+                AWS.config.update(db);
+                this.dynamo_module = AWS;
+            },
+
+            dynamodb: function() {
+                if (this.__objects)
+                    return Promise.value(this.__objects);
+                this.__dynamodb = new this.dynamo_module.DynamoDB();
+                this.__client = new this.dynamo_module.DynamoDB.DocumentClient();
+                this.__objects = {
+                    "database": this.__dynamodb,
+                    "client": this.__client
+                };
+                return Promise.value(this.__objects);
+            },
+
+            createTable(params) {
+                return this.dynamodb().mapSuccess(function(db) {
+                    return Promise.funcCallback(db.database, db.database.createTable, params).mapSuccess(function(result) {
+                        return result;
+                    }, this);
+                }, this);
+            },
+
+            deleteTable(params) {
+                return this.dynamodb().mapSuccess(function(db) {
+                    return Promise.funcCallback(db.database, db.database.deleteTable, params).mapSuccess(function(result) {
+                        return result;
+                    }, this);
+                }, this);
             },
 
             _tableClass: function() {
@@ -1216,56 +1273,23 @@ Scoped.define("module:DynamoDatabase", [
             },
 
             dynamo_object_id: function(id) {
-                return this.dynamo_module.ObjectID;
+                //ADD Ids Generators
             },
 
             generate_object_id: function(id) {
-                return new this.dynamo_module.ObjectID();
-            },
-
-            dynamodb: function() {
-                if (this.__dynamodb)
-                    return Promise.value(this.__dynamodb);
-                var promise = Promise.create();
-                this.dynamo_module.DynamoClient.connect('dynamodb://' + this.__dbUri, {
-                    autoReconnect: true,
-                    useNewUrlParser: true
-                }, promise.asyncCallbackFunc());
-                return promise.mapSuccess(function(client) {
-                    this.__dynamodb = client.db(this.__dbObject.database);
-                    this.__client = client;
-                    return this.__dynamodb;
-                }, this);
+                //ADD Ids Generators
             },
 
             destroy: function() {
+                if (this.__dynamodb)
+                    this.__dynamodb = null;
                 if (this.__client)
-                    this.__client.close();
+                    this.__client = null;
                 inherited.destroy.call(this);
             }
 
         };
 
-    }, {
-
-        uriToObject: function(uri) {
-            // Do not confuse URI parsing when multiple hosts are giving
-            uri = uri.replace(/,[^\/]+/, "");
-            var parsed = Uri.parse(uri);
-            return {
-                database: Strings.strip_start(parsed.path, "/"),
-                server: parsed.host,
-                port: parsed.port,
-                username: parsed.user,
-                password: parsed.password
-            };
-        },
-
-        objectToUri: function(object) {
-            object.path = object.database;
-            return Uri.build(object);
-        }
-
-    });
+    }, {});
 });
 }).call(Scoped);
