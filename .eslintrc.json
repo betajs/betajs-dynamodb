@@ -1,0 +1,22 @@
+
+{
+    "parserOptions": {
+      "ecmaVersion": 6,
+      "sourceType": "script"
+    },
+    "extends": "eslint:recommended",
+    "rules": {
+      "semi": [
+        "error",
+        "always"
+      ],
+      "dot-notation": "warn",
+      "no-mixed-spaces-and-tabs": "off",
+      "no-undef": "off",
+      "no-extra-boolean-cast": "off",
+      "no-unused-vars": "off",
+      "no-console": "off",
+      "no-empty": "warn",
+      "no-useless-escape": "warn"
+    }
+}

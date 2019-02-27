@@ -3,7 +3,19 @@ We provide a simple abstraction for databases and tables, with a concrete implem
 First, you instantiate a database, e.g. a DynamoDB:
 
 ```javascript
-	var database = new BetaJS.Data.Databases.Dynamo.DynamoDatabase("dynamodb://localhost/database");
+	var database = new BetaJS.Data.Databases.DynamoDB.DynamoDatabase(
+	    {
+                region: "us-west-2",
+                // The endpoint should point to the local or remote computer where DynamoDB (downloadable) is running.
+                endpoint: "http://localhost:8000",
+                /*
+                    accessKeyId and secretAccessKey defaults can be used while using the downloadable version of DynamoDB.
+                    For security reasons, do not store AWS Credentials in your files. Use Amazon Cognito instead.
+                */
+                accessKeyId: "fakeMyKeyId",
+                secretAccessKey: "fakeSecretAccessKey"
+            }
+	);
 ```
  
 The `DynamoDatabase` class inherits from the abstract `Database` class.
@@ -18,16 +30,15 @@ A `table` instance allows you to perform the typical (asynchronous) CRUD operati
 
 ```javascript
 	table.insertRow({row data}).success(function (inserted) {...}).error(function (error) {...});
-	
+        //In this version, the row data must contain the Key	
+
 	table.removeRow({remove query}).success(function () {...}).error(function (error) {...});
-	table.removeById(id).success(function () {...}).error(function (error) {...});
+	
 	
 	table.updateRow({update query}, {row data}).success(function (updated) {...}).error(function (error) {...});
-	table.updateById(id, {row data}).success(function (updated) {...}).error(function (error) {...});
 	
 	table.find({search query}, {limit, skip, sort}).success(function (rowIterator) {...}).error(function (error) {...});
 	table.findOne({search query}, {skip, sort}).success(function (row) {...}).error(function (error) {...});
-	table.findById(id).success(function (row) {...}).error(function (error) {...});
 ``` 
 
 In most cases, you would not access database table instances directly but through the abstraction of a store.
@@ -39,3 +50,9 @@ Once you have instantiated your `database` instance, you can create a correspond
 ```javascript
 	var store = new BetaJS.Data.Stores.DatabaseStore(database, "my-database-table");
 ```
+
+### Pending
+* Better `Key` management in tables. Include ID based functions
+* Add DynamoDB Scan method support
+* Improve tests
+* Move Babel and ESLint to betajs-compile

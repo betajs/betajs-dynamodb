@@ -10,14 +10,27 @@ module.exports = function(grunt) {
 		pkg: pkg,
 		babel: {
 			options: {
-				sourceMap: true,
+				sourceMap: false,
 				presets: ['@babel/preset-env']
 			},
 			dist: {
-				files: {
-					"dist/betajs-dinamodb-noscoped1.js":  "dist/betajs-dinamodb-noscoped.js"
-				}
+				files: [
+					{
+						[`dist/${dist}-noscoped.js`]: `dist/${dist}-noscoped.js`
+					},
+					{
+						[`dist/${dist}.js`]: `dist/${dist}.js`
+					},
+				]
 			}
+		},
+		eslint: {
+			target: [
+				`./src/**/*.js`,
+				`./dist/${dist}-noscoped.js`,
+				`./dist/${dist}.js"`,
+				`./Gruntfile.js`,
+				`./tests/**/*.js`]
 		}
 	};
 	/* Compilation */
@@ -43,12 +56,6 @@ module.exports = function(grunt) {
 				require.resolve("betajs"),
 				require.resolve("betajs-data"),
 				"./dist/betajs-sql-noscoped.js"]).
-			lintTask(null, [
-				"./src/**/*.js",
-				"./dist/" + dist + "-noscoped.js",
-				"./dist/" + dist + ".js",
-				"./Gruntfile.js",
-				"./tests/**/*.js"]).
 			githookTask(null, "pre-commit", "check")
 
 			/* External Configurations */.
@@ -75,6 +82,7 @@ module.exports = function(grunt) {
 		"scopedclosurerevision",
 		"concat-scoped",
 		"babel",
+		"eslint",
 		"uglify-noscoped",
 		"uglify-scoped"]);
 	grunt.registerTask("check", ["qunitjs"]);

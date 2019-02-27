@@ -39,7 +39,10 @@ Scoped.define("module:DynamoDatabase", [
                 }, this);
             },
 
-            deleteTable(params) {
+            deleteTable(table_name) {
+                const params = {
+                    TableName: table_name
+                };
                 return this.dynamodb().mapSuccess(function(db) {
                     return Promise.funcCallback(db.database, db.database.deleteTable, params).mapSuccess(function(result) {
                         return result;

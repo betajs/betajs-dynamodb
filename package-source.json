@@ -1,6 +1,6 @@
 {
     "name": "betajs-dynamodb",
-    "version": "1.0.1",
+    "version": "1.0.2",
     "description": "BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.",
     "contributors": [
         "Oliver Friedmann",
@@ -10,26 +10,28 @@
         "@babel/core": "^7.3.3",
         "@babel/polyfill": "^7.2.5",
         "@babel/preset-env": "^7.3.1",
-        "lodash": "",
+        "betajs-compile": "~0.0.28",
+        "betajs-scoped": "~0.0.13",
+        "aws-sdk": "^2.411.0",
         "grunt": "",
-        "grunt-contrib-jshint": "",
-        "grunt-contrib-concat": "",
-        "grunt-contrib-uglify": "~2.3.0",
-        "grunt-contrib-clean": "",
-        "grunt-preprocess": "",
-        "grunt-git-revision-count": "",
+        "grunt-babel": "^8.0.0",
         "grunt-closure-tools": "",
-        "load-grunt-tasks": "^4.0.0",
-        "qunitjs": "",
-        "grunt-wget": "",
+        "grunt-contrib-clean": "",
+        "grunt-contrib-concat": "",
+        "grunt-contrib-jshint": "",
+        "grunt-contrib-uglify": "~2.3.0",
+        "grunt-git-revision-count": "",
+        "grunt-githooks": "",
         "grunt-jsdoc": "",
+        "grunt-preprocess": "",
         "grunt-shell": "",
         "grunt-template": "",
-        "grunt-githooks": "",
-        "grunt-betajs-docs-compile": "",
-        "betajs-scoped": "~0.0.13",
-        "betajs-compile": "~0.0.28",
-        "js-beautify": ""
+        "grunt-wget": "",
+        "js-beautify": "",
+        "load-grunt-tasks": "^4.0.0",
+        "grunt-eslint": "^21.0.0",
+        "lodash": "",
+        "qunitjs": ""
     },
     "dependencies": {
         "betajs": "~1.0.96",
@@ -45,9 +47,9 @@
         "installdoc": "docsrc/common/install.md",
         "summarydoc": "docsrc/common/summary.md",
         "badges": {
-            "codeclimate": true,
+            "codeclimate": false,
             "travis": false,
-            "npm": true
+            "npm": false
         },
         "compatability": {
             "NodeJS": "4.0 - Latest"
@@ -58,12 +60,6 @@
         "dependencies": {
             "betajs": "https://github.com/betajs/betajs",
             "betajs-data": "https://github.com/betajs/betajs-data"
-        },
-        "cdn": {
-            "betajs-dynamodb.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb.js",
-            "betajs-dynamodb.min.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb.min.js",
-            "betajs-dynamodb-noscoped.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb-noscoped.js",
-            "betajs-dynamodb-noscoped.min.js": "http://cdn.rawgit.com/betajs/betajs-dynamodb/master/dist/betajs-dynamodb-noscoped.min.js"
         }
     }
 }

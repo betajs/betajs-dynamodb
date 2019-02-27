@@ -33,6 +33,7 @@ Scoped.define("module:DynamoDatabaseTable", [
             },
 
             primary_key: function() {
+                //TODO Better handling of key
                 return "_id";
             },
 
@@ -47,7 +48,7 @@ Scoped.define("module:DynamoDatabaseTable", [
             _find: function(query, options) {
                 return this.table().mapSuccess(function(table) {
                     const queryParams = this.__queryParams(query, options);
-                    const params = Object.assign(table.params, queryParams);
+                    const params = Object.assign({}, table.params, queryParams);
                     return Promise.funcCallback(table.client, table.client.query, params).mapSuccess(function(data) {
                         return new ArrayIterator(data.Items);
                     }, this);
@@ -56,11 +57,11 @@ Scoped.define("module:DynamoDatabaseTable", [
 
             _findOne: function(query) {
                 return this.table().mapSuccess(function(table) {
-                    const params = Object.assign(table.params, {
+                    const params = Object.assign({}, table.params, {
                         Key: query
                     });
                     return Promise.funcCallback(table.client, table.client.get, params).mapSuccess(function(data) {
-                        return new ArrayIterator(data.Item);
+                        return data.Item;
                     }, this);
                 }, this);
             },
@@ -68,7 +69,7 @@ Scoped.define("module:DynamoDatabaseTable", [
             _count: function(query) {
                 return this.table().mapSuccess(function(table) {
                     const queryParams = this.__queryParams(query, options);
-                    const params = Object.assign(table.params, queryParams);
+                    const params = Object.assign({}, table.params, queryParams);
                     return Promise.funcCallback(table.client, table.client.query, params).mapSuccess(function(data) {
                         return new ArrayIterator(data.Count);
                     }, this);
@@ -77,7 +78,7 @@ Scoped.define("module:DynamoDatabaseTable", [
 
             _insertRow: function(row) {
                 return this.table().mapSuccess(function(table) {
-                    const params = Object.assign(table.params, {
+                    const params = Object.assign({}, table.params, {
                         Item: row
                     });
                     return Promise.funcCallback(table.client, table.client.put, params).mapSuccess(function(result) {
@@ -88,21 +89,24 @@ Scoped.define("module:DynamoDatabaseTable", [
 
             _removeRow: function(query) {
                 return this.table().mapSuccess(function(table) {
-                    const params = Object.assign(table.params, {
-                        Key: query
+                    const params = Object.assign({}, table.params, {
+                        Key: query,
+                        ReturnValues: "NONE"
                     });
-                    return Promise.funcCallback(table.client, table.client.delete, params);
+                    return Promise.funcCallback(table.client, table.client.delete, params).mapSuccess(function(succ) {
+                        return succ;
+                    });
                 }, this);
             },
 
             _updateRow: function(key, data) {
                 return this.table().mapSuccess(function(table) {
                     const updateParams = this.__updateParams(data);
-                    let params = Object.assign(table.params, {
+                    let params = Object.assign({}, table.params, {
                         Key: key,
-                        ReturnValues: "UPDATED_NEW"
+                        ReturnValues: "ALL_NEW"
                     });
-                    params = Object.assign(params, updateParams);
+                    params = Object.assign({}, params, updateParams);
                     return Promise.funcCallback(table.client, table.client.update, params).mapSuccess(function(result) {
                         return result;
                     }, this);
@@ -118,7 +122,7 @@ Scoped.define("module:DynamoDatabaseTable", [
             },
 
             __updateParams(query) {
-                const workQuery = Object.assign(query);
+                const workQuery = Object.assign({}, query);
                 let updateExpressions = [];
                 let expressionAttributesValues = [];
                 Objs.iter(workQuery, function(item, index) {
@@ -134,7 +138,7 @@ Scoped.define("module:DynamoDatabaseTable", [
             },
 
             __queryParams(query, options) {
-                const workQuery = Object.assign(query);
+                const workQuery = Object.assign({}, query);
                 let keyConditionExpresion = [];
                 let filterConditionExpresion = [];
                 let expressionAttributesNames = [];
