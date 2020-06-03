@@ -15,7 +15,7 @@
         "url": "https://github.com/betajs/betajs-dynamodb/issues"
     },
     "name": "betajs-dynamodb",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "description": "BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.",
     "contributors": [
         "Oliver Friedmann",
@@ -51,6 +51,11 @@
     "dependencies": {
         "betajs": "~1.0.96",
         "betajs-data": "~1.0.41"
+    },
+    "scripts": {
+        "test": "grunt check",
+        "relink": "npm link betajs && npm link betajs-compile && npm link betajs-scoped && npm link betajs-data",
+        "reinstall": "rm -f package-lock.json && rm -rf node_modules && npm i && npm run relink"
     },
     "repository": {
         "type": "git",

@@ -3,7 +3,7 @@
 function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
 
 /*!
-betajs-dynamodb - v1.0.2 - 2019-02-27
+betajs-dynamodb - v1.0.3 - 2020-06-02
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -11,7 +11,7 @@ Apache-2.0 Software License.
 /** @flow **/
 
 /*!
-betajs-scoped - v0.0.19 - 2018-04-07
+betajs-scoped - v0.0.22 - 2019-10-23
 Copyright (c) Oliver Friedmann
 Apache-2.0 Software License.
 */
@@ -245,14 +245,15 @@ var Scoped = function () {
       ) {
         var current = Globals.get(namespace || Attach.__namespace);
 
-        if (current && Helper.typeOf(current) == "object" && current.guid == this.guid && Helper.typeOf(current.version) == "string") {
+        if (current && Helper.typeOf(current) === "object" && current.guid === this.guid && Helper.typeOf(current.version) === "string") {
+          if (this.upgradable === false || current.upgradable === false) return current;
           var my_version = this.version.split(".");
           var current_version = current.version.split(".");
           var newer = false;
 
           for (var i = 0; i < Math.min(my_version.length, current_version.length); ++i) {
             newer = parseInt(my_version[i], 10) > parseInt(current_version[i], 10);
-            if (my_version[i] != current_version[i]) break;
+            if (my_version[i] !== current_version[i]) break;
           }
 
           return newer ? this.attach(namespace) : current;
@@ -270,7 +271,7 @@ var Scoped = function () {
       ) {
         if (namespace) Attach.__namespace = namespace;
         var current = Globals.get(Attach.__namespace);
-        if (current == this) return this;
+        if (current === this) return this;
         Attach.__revert = current;
 
         if (current) {
@@ -314,7 +315,7 @@ var Scoped = function () {
        */
       exports: function exports(mod, object, forceExport) {
         mod = mod || (typeof module != "undefined" ? module : null);
-        if (_typeof(mod) == "object" && mod && "exports" in mod && (forceExport || mod.exports == this || !mod.exports || Helper.isEmpty(mod.exports))) mod.exports = object || this;
+        if (_typeof(mod) == "object" && mod && "exports" in mod && (forceExport || mod.exports === this || !mod.exports || Helper.isEmpty(mod.exports))) mod.exports = object || this;
         return this;
       }
     };
@@ -860,7 +861,7 @@ var Scoped = function () {
       },
 
       /**
-       * Extends a potentiall existing name space once a list of name space locators is available.
+       * Extends a potentially existing name space once a list of name space locators is available.
        * 
        * @param {string} namespaceLocator the name space that is to be defined
        * @param {array} dependencies a list of name space locator dependencies (optional)
@@ -1003,7 +1004,8 @@ var Scoped = function () {
      */
     return {
       guid: "4b6878ee-cb6a-46b3-94ac-27d91f58d666",
-      version: '0.0.19',
+      version: '0.0.22',
+      upgradable: true,
       upgrade: Attach.upgrade,
       attach: Attach.attach,
       detach: Attach.detach,
@@ -1043,7 +1045,7 @@ var Scoped = function () {
   return Public;
 }.call(void 0);
 /*!
-betajs-dynamodb - v1.0.2 - 2019-02-27
+betajs-dynamodb - v1.0.3 - 2020-06-02
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -1057,29 +1059,102 @@ Apache-2.0 Software License.
   Scoped.define("module:", function () {
     return {
       "guid": "1f507e0c-602b-4372-b067-4e19442f28f4",
-      "version": "1.0.2",
-      "datetime": 1551300756188
+      "version": "1.0.3",
+      "datetime": 1591149910365
     };
   });
   Scoped.assumeVersion('base:version', '~1.0.96');
   Scoped.assumeVersion('data:version', '~1.0.41');
-  Scoped.define("module:DynamoDatabaseTable", ["data:Databases.DatabaseTable", "base:Promise", "base:Objs", "base:Types", "base:Iterators.ArrayIterator"], function (DatabaseTable, Promise, Objs, Types, ArrayIterator, scoped) {
+  Scoped.define("module:DynamoDatabaseTable", ["data:Databases.DatabaseTable", "base:Promise", "base:Objs", "base:Types", "base:Iterators.ArrayIterator", "base:Iterators.SkipIterator", "data:Queries", "base:Classes.CacheHash"], function (DatabaseTable, Promise, Objs, Types, ArrayIterator, SkipIterator, Queries, CacheHash, scoped) {
     return DatabaseTable.extend({
       scoped: scoped
     }, function (inherited) {
+      var COND_MAP = {
+        "$gte": ">=",
+        "$lte": "<=",
+        "$gt": ">",
+        "$lt": "<"
+      };
       return {
         constructor: function constructor() {
           inherited.constructor.apply(this, arguments);
-          this._table_options = this._table_options || [];
-          this._table_options.idkeys = this._table_options.idkeys || [];
+          this._table_options.locals = this._table_options.locals || [];
+          this._table_options.globals = this._table_options.globals || [];
+        },
+        _deleteTable: function _deleteTable(table_name) {
+          return this.dynamodb().mapSuccess(function (db) {
+            return Promise.funcCallback(db.database, db.database.deleteTable, {
+              TableName: table_name
+            }).mapSuccess(function (result) {
+              return result;
+            }, this);
+          }, this);
+        },
+        _createTable: function _createTable(newName) {
+          var keySchema = [{
+            AttributeName: this._table_options.primary.hash,
+            KeyType: 'HASH'
+          }];
 
-          this._table_options.idkeys.unshift("_id");
+          if (this._table_options.primary.range) {
+            keySchema.push({
+              AttributeName: this._table_options.primary.range,
+              KeyType: 'RANGE'
+            });
+          }
 
-          this._table_options.datekeys = this._table_options.datekeys || [];
+          var config = {
+            TableName: newName,
+            BillingMode: "PAY_PER_REQUEST",
+            AttributeDefinitions: Objs.arrayify(this._table_options.attributes, function (value, key) {
+              return {
+                AttributeName: key,
+                AttributeType: value
+              };
+            }),
+            KeySchema: keySchema
+          };
+
+          if (this._table_options.locals.length > 0) {
+            config.LocalSecondaryIndexes = this._table_options.locals.map(function (localRange) {
+              return {
+                IndexName: [this._table_options.primary.hash, localRange].join("_"),
+                KeySchema: [{
+                  AttributeName: this._table_options.primary.hash,
+                  KeyType: 'HASH'
+                }, {
+                  AttributeName: localRange,
+                  KeyType: 'RANGE'
+                }]
+              };
+            }, this);
+          }
+
+          if (this._table_options.locals.length > 0) {
+            config.GlobalSecondaryIndexes = this._table_options.globals.map(function (global) {
+              return {
+                IndexName: [global.hash, global.range].join("_"),
+                KeySchema: [{
+                  AttributeName: global.hash,
+                  KeyType: 'HASH'
+                }, {
+                  AttributeName: global.range,
+                  KeyType: 'RANGE'
+                }]
+              };
+            });
+          }
+
+          return this.dynamodb().mapSuccess(function (db) {
+            return Promise.funcCallback(db.database, db.database.createTable, config);
+          }, this);
+        },
+        dynamodb: function dynamodb() {
+          return this._database.dynamodb();
         },
         table: function table() {
           if (this.__table) return Promise.create(this.__table);
-          return this._database.dynamodb().mapSuccess(function (db) {
+          return this.dynamodb().mapSuccess(function (db) {
             this.__table = {
               params: {
                 TableName: this._table_name
@@ -1089,218 +1164,191 @@ Apache-2.0 Software License.
             return this.__table;
           }, this);
         },
+        _insertRow: function _insertRow(row) {
+          return this.table().mapSuccess(function (table) {
+            return Promise.funcCallback(table.client, table.client.put, Object.assign({}, table.params, {
+              Item: row
+            })).mapSuccess(function (result) {
+              return result;
+            }, this);
+          }, this);
+        },
         primary_key: function primary_key() {
-          //TODO Better handling of key
-          return "_id";
+          return this._table_options.primary.hash;
         },
-        _encode: function _encode(data, valueType) {
-          return data;
+        _removeRow: function _removeRow(query) {
+          // Find by primary
+          if (this._table_options.primary.hash in query && (!this._table_options.primary.range || this._table_options.primary.range in query)) {
+            return this.table().mapSuccess(function (table) {
+              var subQuery = {};
+              subQuery[this._table_options.primary.hash] = query[this._table_options.primary.hash];
+              if (this._table_options.primary.range) subQuery[this._table_options.primary.range] = query[this._table_options.primary.range];
+              return Promise.funcCallback(table.client, table.client["delete"], Object.assign({}, table.params, {
+                Key: subQuery,
+                ReturnValues: "NONE"
+              }));
+            }, this);
+          } else // Find by secondary
+            return this._findOne(query).mapSuccess(this._removeRow, this);
         },
-        _decode: function _decode(data) {
-          return data;
+        _updateRow: function _updateRow(query, data) {
+          // Find by primary
+          if (this._table_options.primary.hash in query && (!this._table_options.primary.range || this._table_options.primary.range in query)) {
+            return this.table().mapSuccess(function (table) {
+              var subQuery = {};
+              subQuery[this._table_options.primary.hash] = query[this._table_options.primary.hash];
+              if (this._table_options.primary.range) subQuery[this._table_options.primary.range] = query[this._table_options.primary.range];
+              return Promise.funcCallback(table.client, table.client.update, Object.assign({}, table.params, {
+                Key: subQuery,
+                AttributeUpdates: Objs.map(data, function (value) {
+                  return {
+                    "ACTION": "PUT",
+                    "Value": value
+                  };
+                }),
+                ReturnValues: "ALL_NEW"
+              })).mapSuccess(function (result) {
+                return result;
+              }, this);
+            }, this);
+          } else {
+            // Find by secondary
+            return this._findOne(query).mapSuccess(function (query) {
+              return this._updateRow(query, data);
+            }, this);
+          }
         },
         _find: function _find(query, options) {
           return this.table().mapSuccess(function (table) {
-            var queryParams = this.__queryParams(query, options);
+            var ean = new CacheHash("#n");
+            var eav = new CacheHash(":v");
+            options = options || {};
+            var primary = this._table_options.primary;
+            var remainingQuery = {};
+            /*
+                USE GET and PRIMARY KEY.
+                 This can only be done if the query contains the primary key AND range is not part of the primary key
+                or it is part of the primary key and an equal value.
+             */
 
-            var params = Object.assign({}, table.params, queryParams);
-            return Promise.funcCallback(table.client, table.client.query, params).mapSuccess(function (data) {
-              return new ArrayIterator(data.Items);
-            }, this);
-          }, this);
-        },
-        _findOne: function _findOne(query) {
-          return this.table().mapSuccess(function (table) {
-            var params = Object.assign({}, table.params, {
-              Key: query
+            if (Queries.isEqualValueKey(query, primary.hash) && (!primary.range || Queries.isEqualValueKey(query, primary.range))) {
+              // Limit and Sort are irrelevant as number of results is 0..1
+              // If skip is given > 0 just return nothing
+              if (options.skip > 0) return Promise.value([]);
+              var splt = Objs.splitObject(query, function (value, key) {
+                return key === primary.hash || key === primary.range;
+              });
+              query = splt[0];
+              remainingQuery = splt[1];
+              return Promise.funcCallback(table.client, table.client.get, Object.assign({}, table.params, {
+                Key: query
+              })).mapSuccess(function (result) {
+                result = result && result.Item && Queries.evaluate(remainingQuery, result.Item) ? [result.Item] : [];
+                return new ArrayIterator(result);
+              }, this);
+            }
+
+            var strategies = [];
+
+            if (primary.range) {
+              strategies.push({
+                index: undefined,
+                hash: primary.hash,
+                range: primary.range
+              });
+            }
+
+            this._table_options.locals.forEach(function (localRange) {
+              strategies.push({
+                index: [primary.hash, localRange].join("_"),
+                hash: primary.hash,
+                range: localRange
+              });
             });
-            return Promise.funcCallback(table.client, table.client.get, params).mapSuccess(function (data) {
-              return data.Item;
-            }, this);
-          }, this);
-        },
-        _count: function _count(query) {
-          return this.table().mapSuccess(function (table) {
-            var queryParams = this.__queryParams(query, options);
 
-            var params = Object.assign({}, table.params, queryParams);
-            return Promise.funcCallback(table.client, table.client.query, params).mapSuccess(function (data) {
-              return new ArrayIterator(data.Count);
-            }, this);
-          }, this);
-        },
-        _insertRow: function _insertRow(row) {
-          return this.table().mapSuccess(function (table) {
-            var params = Object.assign({}, table.params, {
-              Item: row
+            this._table_options.globals.forEach(function (global) {
+              strategies.push({
+                index: [global.hash, global.range].join("_"),
+                hash: global.hash,
+                range: global.range
+              });
             });
-            return Promise.funcCallback(table.client, table.client.put, params).mapSuccess(function (result) {
-              return result;
-            }, this);
-          }, this);
-        },
-        _removeRow: function _removeRow(query) {
-          return this.table().mapSuccess(function (table) {
-            var params = Object.assign({}, table.params, {
-              Key: query,
-              ReturnValues: "NONE"
-            });
-            return Promise.funcCallback(table.client, table.client.delete, params).mapSuccess(function (succ) {
-              return succ;
-            });
-          }, this);
-        },
-        _updateRow: function _updateRow(key, data) {
-          return this.table().mapSuccess(function (table) {
-            var updateParams = this.__updateParams(data);
 
-            var params = Object.assign({}, table.params, {
-              Key: key,
-              ReturnValues: "ALL_NEW"
-            });
-            params = Object.assign({}, params, updateParams);
-            return Promise.funcCallback(table.client, table.client.update, params).mapSuccess(function (result) {
-              return result;
-            }, this);
-          }, this);
-        },
-        ensureIndex: function ensureIndex(key) {
-          var obj = {};
-          obj[key] = 1;
-          this.table().success(function (table) {
-            table.ensureIndex(Objs.objectBy(key, 1));
-          });
-        },
-        __updateParams: function __updateParams(query) {
-          var workQuery = Object.assign({}, query);
-          var updateExpressions = [];
-          var expressionAttributesValues = [];
-          Objs.iter(workQuery, function (item, index) {
-            var indexValue = Math.floor(Math.random() * 10 + 1);
-            updateExpressions.push("".concat(index, " = :").concat(indexValue));
-            expressionAttributesValues[":".concat(indexValue)] = item;
-          });
-          return {
-            "UpdateExpression": "set " + updateExpressions.join(",  "),
-            "ExpressionAttributeValues": expressionAttributesValues
-          };
-        },
-        __queryParams: function __queryParams(query, options) {
-          var workQuery = Object.assign({}, query);
-          var keyConditionExpresion = [];
-          var filterConditionExpresion = [];
-          var expressionAttributesNames = [];
-          var expressionAttributesValues = [];
-          Objs.iter(workQuery.keyConditions, function (item, index) {
-            if (Types.is_object(item)) {
-              var operator = Objs.keys(item).join();
+            for (var i = 0; i < strategies.length; ++i) {
+              var strategy = strategies[i];
 
-              if (operator !== "begins_with") {
-                var op = "";
+              if (Queries.isEqualValueKey(query, strategy.hash) && strategy.range in query) {
+                var spl = Objs.splitObject(query, function (value, key) {
+                  return key === strategy.hash || key === strategy.range;
+                });
+                query = spl[0];
+                remainingQuery = spl[1];
+                var conditions = [];
+                conditions.push([ean.hashKey(strategy.hash), "=", eav.hashKey(query[strategy.hash])]);
 
-                switch (operator) {
-                  case "ne":
-                    op = "!=";
-                    break;
+                if (Queries.isEqualValueKey(query, strategy.range)) {
+                  conditions.push([ean.hashKey(strategy.range), "=", eav.hashKey(query[strategy.range])]);
+                } else {
+                  var rangeCond = Objs.ithKey(query[strategy.range]);
+                  var rangeValue = query[strategy.range][rangeCond]; // $gte -> gt
 
-                  default:
-                    op = "=";
+                  var mappedCond = COND_MAP[rangeCond];
+                  conditions.push([ean.hashKey(strategy.range), mappedCond, eav.hashKey(rangeValue)]);
                 }
 
-                keyConditionExpresion.push("#".concat(index, " ").concat(op, " :").concat(index));
-              } else {
-                keyConditionExpresion.push("begins_with(#".concat(index, ", :").concat(index, ")"));
+                return Promise.funcCallback(table.client, table.client.query, Object.assign({}, table.params, {
+                  IndexName: strategy.index,
+                  KeyConditionExpression: conditions.map(function (a) {
+                    return a.join(" ");
+                  }).join(" and "),
+                  ExpressionAttributeNames: ean.cache(),
+                  ExpressionAttributeValues: eav.cache(),
+                  Limit: options.limit ? options.limit + (options.skip || 0) : undefined,
+                  ScanIndexForward: !!options.sort
+                })).mapSuccess(function (result) {
+                  var items = result && result.Items ? result.Items : [];
+                  if (!Types.is_empty(remainingQuery)) items = items.filter(function (row) {
+                    return Queries.evaluate(remainingQuery, row);
+                  });
+                  var iterator = new ArrayIterator(items);
+                  return options.skip > 0 ? new SkipIterator(iterator, options.skip) : iterator;
+                }, this);
               }
-
-              expressionAttributesNames["#".concat(index)] = index;
-              expressionAttributesValues[":".concat(index)] = Objs.values(item)[0];
-            } else {
-              keyConditionExpresion.push("#".concat(index, " = :").concat(index));
-              expressionAttributesNames["#".concat(index)] = index;
-              expressionAttributesValues[":".concat(index)] = item;
             }
-          });
-          Objs.iter(workQuery.filterExpression, function (item, index) {
-            if (Types.is_object(item)) {
-              var operator = Objs.keys(item).join();
 
-              if (operator !== "begins_with") {
-                filterConditionExpresion.push("#".concat(index, " ").concat(operator, " :").concat(index));
-              } else {
-                filterConditionExpresion.push("begins_with(#".concat(index, ", :").concat(index, ")"));
-              }
-
-              expressionAttributesNames["#".concat(index)] = index;
-              expressionAttributesValues[":".concat(index)] = Objs.values(item)[0];
-            } else {
-              filterConditionExpresion.push("#".concat(index, " = :").concat(index));
-              expressionAttributesNames["#".concat(index)] = index;
-              expressionAttributesValues[":".concat(index)] = item;
-            }
-          });
-          return {
-            "KeyConditionExpression": keyConditionExpresion.join(" and "),
-            "FilterExpression": filterConditionExpresion.join(" and "),
-            "ExpressionAttributeNames": expressionAttributesNames,
-            "ExpressionAttributeValues": expressionAttributesValues
-          };
+            return Promise.error("Unsupported query");
+          }, this);
         }
       };
     });
   });
-  Scoped.define("module:DynamoDatabase", ["data:Databases.Database", "module:DynamoDatabaseTable", "base:Strings", "base:Types", "base:Objs", "base:Promise", "base:Net.Uri"], function (Database, DynamoDatabaseTable, Strings, Types, Objs, Promise, Uri, scoped) {
+  Scoped.define("module:DynamoDatabase", ["data:Databases.Database", "module:DynamoDatabaseTable", "base:Promise"], function (Database, DynamoDatabaseTable, Promise, scoped) {
     return Database.extend({
       scoped: scoped
     }, function (inherited) {
       return {
         constructor: function constructor(db) {
           inherited.constructor.call(this);
-
-          var AWS = require("aws-sdk");
-
-          AWS.config.update(db);
-          this.dynamo_module = AWS;
+          this.__db = db;
         },
         dynamodb: function dynamodb() {
-          if (this.__objects) return Promise.value(this.__objects);
-          this.__dynamodb = new this.dynamo_module.DynamoDB();
-          this.__client = new this.dynamo_module.DynamoDB.DocumentClient();
-          this.__objects = {
-            "database": this.__dynamodb,
-            "client": this.__client
-          };
+          if (!this.__objects) {
+            var AWS = require("aws-sdk");
+
+            this.__dynamodb = new AWS.DynamoDB(this.__db);
+            this.__client = new AWS.DynamoDB.DocumentClient(this.__db);
+            this.__objects = {
+              "database": this.__dynamodb,
+              "client": this.__client
+            };
+          }
+
           return Promise.value(this.__objects);
-        },
-        createTable: function createTable(params) {
-          return this.dynamodb().mapSuccess(function (db) {
-            return Promise.funcCallback(db.database, db.database.createTable, params).mapSuccess(function (result) {
-              return result;
-            }, this);
-          }, this);
-        },
-        deleteTable: function deleteTable(table_name) {
-          var params = {
-            TableName: table_name
-          };
-          return this.dynamodb().mapSuccess(function (db) {
-            return Promise.funcCallback(db.database, db.database.deleteTable, params).mapSuccess(function (result) {
-              return result;
-            }, this);
-          }, this);
         },
         _tableClass: function _tableClass() {
           return DynamoDatabaseTable;
-        },
-        dynamo_object_id: function dynamo_object_id(id) {//ADD Ids Generators
-        },
-        generate_object_id: function generate_object_id(id) {//ADD Ids Generators
-        },
-        destroy: function destroy() {
-          if (this.__dynamodb) this.__dynamodb = null;
-          if (this.__client) this.__client = null;
-          inherited.destroy.call(this);
         }
       };
-    }, {});
+    });
   });
 }).call(Scoped);

@@ -1,4 +1,4 @@
-# betajs-dynamodb 1.0.2
+# betajs-dynamodb 1.0.3
 
 
 BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.
