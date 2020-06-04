@@ -1,6 +1,6 @@
 {
     "name": "betajs-dynamodb",
-    "version": "1.0.3",
+    "version": "1.0.4",
     "description": "BetaJS-DynamoDB is a DynamoDB wrapper for BetaJS.",
     "contributors": [
         "Oliver Friedmann",

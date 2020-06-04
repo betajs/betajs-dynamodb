@@ -69,11 +69,14 @@ Scoped.define("module:DynamoDatabaseTable", [
                             }, {
                                 AttributeName: localRange,
                                 KeyType: 'RANGE'
-                            }]
+                            }],
+                            Projection: {
+                                ProjectionType: "ALL"
+                            }
                         };
                     }, this);
                 }
-                if (this._table_options.locals.length > 0) {
+                if (this._table_options.globals.length > 0) {
                     config.GlobalSecondaryIndexes = this._table_options.globals.map(function(global) {
                         return {
                             IndexName: [global.hash, global.range].join("_"),
@@ -83,7 +86,10 @@ Scoped.define("module:DynamoDatabaseTable", [
                             }, {
                                 AttributeName: global.range,
                                 KeyType: 'RANGE'
-                            }]
+                            }],
+                            Projection: {
+                                ProjectionType: "ALL"
+                            }
                         };
                     });
                 }

@@ -1,7 +1,7 @@
 "use strict";
 
 /*!
-betajs-dynamodb - v1.0.3 - 2020-06-02
+betajs-dynamodb - v1.0.4 - 2020-06-04
 Copyright (c) Oliver Friedmann,Pablo Iglesias
 Apache-2.0 Software License.
 */
@@ -13,8 +13,8 @@ Apache-2.0 Software License.
   Scoped.define("module:", function () {
     return {
       "guid": "1f507e0c-602b-4372-b067-4e19442f28f4",
-      "version": "1.0.3",
-      "datetime": 1591149910365
+      "version": "1.0.4",
+      "datetime": 1591244758425
     };
   });
   Scoped.assumeVersion('base:version', '~1.0.96');
@@ -79,12 +79,15 @@ Apache-2.0 Software License.
                 }, {
                   AttributeName: localRange,
                   KeyType: 'RANGE'
-                }]
+                }],
+                Projection: {
+                  ProjectionType: "ALL"
+                }
               };
             }, this);
           }
 
-          if (this._table_options.locals.length > 0) {
+          if (this._table_options.globals.length > 0) {
             config.GlobalSecondaryIndexes = this._table_options.globals.map(function (global) {
               return {
                 IndexName: [global.hash, global.range].join("_"),
@@ -94,7 +97,10 @@ Apache-2.0 Software License.
                 }, {
                   AttributeName: global.range,
                   KeyType: 'RANGE'
-                }]
+                }],
+                Projection: {
+                  ProjectionType: "ALL"
+                }
               };
             });
           }
